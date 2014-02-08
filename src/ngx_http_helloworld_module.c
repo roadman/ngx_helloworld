@@ -5,6 +5,8 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#include <string.h>
+
 #define hw_strcpy(d, s) strcpy((char *) d, (const char *) s);
 
 #define hw_pstrfromchar(p, ns, c) \
@@ -73,15 +75,11 @@ static ngx_int_t ngx_http_helloworld_handler(ngx_http_request_t *req)
 {
     ngx_chain_t     out;
 
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "***Call helloworld Handler***");
+    ngx_log_error(NGX_LOG_DEBUG, req->connection->log, 0, "***Call helloworld Handler***");
 
-    res = helloworld_output_builder(req, &out, NGX_HTTP_OK);
-    if(NGX_OK != res)
-    {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
+    (void)helloworld_output_builder(req, &out, NGX_HTTP_OK);
 
-    return ngx_http_output_filter(r, &out);
+    return ngx_http_output_filter(req, &out);
 }
 
 ngx_int_t ngx_http_helloworld_init_process(ngx_cycle_t *cycle)
@@ -120,14 +118,14 @@ static ngx_int_t helloworld_output_builder(
     out->buf  = buffmng;
     out->next = NULL;
 
-    buffmng->pos      = OUTPUT_STRING;
-    buffmng->last     = buffmng->pos + sizeof(OUTPUT_STRING) - 1;
+    buffmng->pos      = (unsigned char *)OUTPUT_STRING;
+    buffmng->last     = (buffmng->pos + (strlen(OUTPUT_STRING) - 1));
     buffmng->memory   = 1;
     buffmng->last_buf = 1;
 
     hw_pstrfromchar(req->pool, req->headers_out.content_type, "text/html; charset=UTF-8");
     req->headers_out.status            = status;
-    req->headers_out.content_length_n  = sizeof(OUTPUT_STRING);
+    req->headers_out.content_length_n  = strlen(OUTPUT_STRING);
 
     rc = ngx_http_send_header(req);
     if (rc == NGX_ERROR || rc > NGX_OK || req->header_only)
